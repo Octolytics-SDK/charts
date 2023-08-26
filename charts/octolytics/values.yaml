@@ -39,8 +39,10 @@ secrets:
     key: database-username
   - env: DATABASE_PASSWORD
     key: database-password
+
+env_variables:
   - env: DATABASE_URL
-    key: database-url
+    value: "jdbc:postgresql://127.0.0.1:5432/octolytics_develop"
 
 
 serviceAccount:
