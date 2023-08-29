@@ -1,0 +1,103 @@
+# Default values for octolytics-core.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+client: octolytics
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    cert-manager.io/cluster-issuer: letsencrypt-prod-http
+  tls:
+    - secretName: metabase-octolytics-core-com-tls
+      hosts:
+        - metabase.octolytics-core.com
+  hosts:
+    - host: metabase.octolytics-core.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+
+application:
+  name: metabase
+  environment: production
+
+image:
+  repository: metabase/metabase
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+secrets:
+  - env: MB_DB_PASS
+    key: metabase-root-database-password
+
+env_variables:
+  - env: MB_DB_TYPE
+    value: mysql
+  - env: MB_DB_DBNAME
+    value: metabase
+  - env: MB_DB_PORT
+    value: 3306
+  - env: MB_DB_USER
+    value: root
+  - env: MB_DB_HOST
+    value: localhost
+
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations:
+    iam.gke.io/gcp-service-account: octolytics-core-gke@octolytics-core.iam.gserviceaccount.com
+  name: metabase
+
+service:
+  type: ClusterIP
+  port: 3000
+
+healthcheck:
+  path: /
+  initialWait: 50
+  period: 15
+  failures: 3
+
+
+database:
+  url: octolytics-core:us-central1:metabase
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  metabase:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 1
+      memory: 2Gi
+  cloudSqlProxy:
+    limits:
+      cpu: 0.5
+      memory: 512Mi
+    requests:
+      cpu: 0.5
+      memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+
