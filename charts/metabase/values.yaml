@@ -71,7 +71,7 @@ healthcheck:
 
 
 database:
-  url: octolytics-core:us-central1:metabase
+  urls: octolytics-core:us-central1:metabase=tcp:0.0.0.0:3306
 
 resources:
   # We usually recommend not to specify default resources and to leave this as a conscious
