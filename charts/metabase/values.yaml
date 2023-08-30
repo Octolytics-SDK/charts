@@ -44,7 +44,7 @@ env_variables:
   - env: MB_DB_DBNAME
     value: metabase
   - env: MB_DB_PORT
-    value: 3306
+    value: "3306"
   - env: MB_DB_USER
     value: root
   - env: MB_DB_HOST
@@ -71,7 +71,7 @@ healthcheck:
 
 
 database:
-  urls: octolytics-core:us-central1:metabase=tcp:0.0.0.0:3306
+  url: octolytics-core:us-central1:metabase
 
 resources:
   # We usually recommend not to specify default resources and to leave this as a conscious
