@@ -29,7 +29,7 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: cloudsql
-          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.1.0
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.2
           args:
             - "--structured-logs"
             - "--port=5432"
