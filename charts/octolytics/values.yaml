@@ -62,6 +62,7 @@ healthcheck:
   initialWait: 50
   period: 15
   failures: 3
+  timeout: 3
 
 
 database:

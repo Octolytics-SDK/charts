@@ -68,12 +68,14 @@ spec:
             initialDelaySeconds: {{ .Values.healthcheck.initialWait }}
             periodSeconds: {{ .Values.healthcheck.period }}
             failureThreshold: {{ .Values.healthcheck.failures }}
+            timeoutSeconds: {{ .Values.healthcheck.timeout }}
             httpGet:
               path: {{ .Values.healthcheck.path }}
               port: http
           readinessProbe:
             initialDelaySeconds: {{ .Values.healthcheck.initialWait }}
             periodSeconds: {{ .Values.healthcheck.period }}
+            timeoutSeconds: {{ .Values.healthcheck.timeout }}
             failureThreshold: {{ .Values.healthcheck.failures }}
             httpGet:
               path: {{ .Values.healthcheck.path }}
