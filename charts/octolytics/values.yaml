@@ -65,6 +65,11 @@ healthcheck:
   timeout: 3
 
 
+extraLabels:
+  tags.datadoghq.com/env: develop
+  tags.datadoghq.com/service: octolytics-core
+  admission.datadoghq.com/enabled: "true"
+
 database:
   url: octolytics-core:us-south1:octolytics-core-staging
 
