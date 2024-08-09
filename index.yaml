@@ -64,6 +64,16 @@ entries:
   octolytics:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-08-09T00:35:01.256874989Z"
+    description: A Helm chart for Kubernetes
+    digest: 658635030dc0d96e927349c63942e4e90cae4ae360964c323b40e9152ab4144d
+    name: octolytics
+    type: application
+    urls:
+    - https://github.com/Octolytics-SDK/charts/releases/download/octolytics-0.3.0/octolytics-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-08-05T14:31:01.233031774Z"
     description: A Helm chart for Kubernetes
     digest: cc0bbc182ff001a7f58afcb02854d81e358f6c48fecd1fa533fc33565034883d
@@ -173,4 +183,4 @@ entries:
     urls:
     - https://github.com/Octolytics-SDK/charts/releases/download/octolytics-core-0.1.0/octolytics-core-0.1.0.tgz
     version: 0.1.0
-generated: "2024-08-05T14:31:01.233092609Z"
+generated: "2024-08-09T00:35:01.256932677Z"
