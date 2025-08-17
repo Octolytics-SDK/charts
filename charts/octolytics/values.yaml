@@ -1,94 +1,130 @@
-# Default values for octolytics-core.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
-replicaCount: 1
-client: octolytics
-
-ingress:
+application:
+  environment: develop
+  name: octolytics-core
+autoscaling:
   enabled: true
+  maxReplicas: 5
+  minReplicas: 1
+  targetCPUUtilizationPercentage: 25
+  targetMemoryUtilizationPercentage: 80
+client: octolytics
+database:
+  url: octolytics-core:us-central1:octolytics-us-central1
+env_variables:
+  - env: DB_CONN_TIMEOUT
+    value: '"2000"'
+  - env: DB_CONN_MIN_IDLE
+    value: '"10"'
+  - env: DB_POOL_SIZE
+    value: '"100"'
+  - env: DB_CONN_IDLE_TIMEOUT
+    value: '"10000"'
+  - env: DB_CONN_MAX
+    value: '"30000"'
+  - env: DD_SERVICE
+    value: octolytics-octolytics-core
+  - env: DD_ENV
+    value: develop
+  - env: DATABASE_URL_RO
+    value: jdbc:postgresql://10.100.17.55:5432/octolytics_develop
+  - env: DATABASE_URL
+    value: jdbc:postgresql://10.100.17.7:5432/octolytics_develop
+  - env: AVAILABLE_MEM
+    value: '"1948"'
+extraLabels:
+  admission.datadoghq.com/enabled: "true"
+  tags.datadoghq.com/env: develop
+  tags.datadoghq.com/service: octolytics-octolytics-core
+healthcheck:
+  failures: 3
+  initialWait: 10
+  path: /octolytics/actuator/health
+  period: 10
+  timeout: 30
+image:
+  pullPolicy: IfNotPresent
+  repository: us-central1-docker.pkg.dev/octolytics-core/octolytics-repo/core
+  tag: 398106f9d099b05464bbb8bce365c88a064aa993
+ingress:
   annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod-http
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/proxy-body-size: 512m
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-    cert-manager.io/cluster-issuer: letsencrypt-prod-http
-  tls:
-    - secretName: api-develop-octolytics-core-com-tls
-      hosts:
-        - api.develop.octolytics-core.com
+  enabled: true
   hosts:
-    - host: api.develop.octolytics-core.com
+    - host: api.octolytics.develop.octolytics-core.com
       paths:
         - path: /
           pathType: ImplementationSpecific
-
-
-application:
-  name: octolytics-core
-  environment: develop
-
-image:
-  repository: us-south1-docker.pkg.dev/octolytics-core/octolytics-core-repo/octolytics-core
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "a24a5a5bf901cbf7fe1eede25eacc2b924a305b8"
-
-secrets:
-  - env: DATABASE_USERNAME
-    key: database-username
-  - env: DATABASE_PASSWORD
-    key: database-password
-
-env_variables:
-  - env: DATABASE_URL
-    value: "jdbc:postgresql://127.0.0.1:5432/octolytics_develop"
-
-
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Annotations to add to the service account
-  annotations:
-    iam.gke.io/gcp-service-account: octolytics-core-gke@octolytics-core.iam.gserviceaccount.com
-  name: "octolytics-core"
-
-service:
-  type: ClusterIP
-  port: 8080
-
-healthcheck:
-  path: /octolytics/actuator/health
-  initialWait: 50
-  period: 15
-  failures: 3
-  timeout: 3
-
-
-extraLabels:
-  tags.datadoghq.com/env: develop
-  tags.datadoghq.com/service: octolytics-core
-  admission.datadoghq.com/enabled: "true"
-
+  tls:
+    - hosts:
+        - api.octolytics.develop.octolytics-core.com
+      secretName: api-octolytics-develop-octolytics-core-com-tls
+replicaCount: 1
 resources:
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-   octolyticsCore:
-     limits:
-       cpu: 1
-       memory: 2Gi
-     requests:
-       cpu: 1
-       memory: 2Gi
-   
+  cloudSqlProxy:
+    limits:
+      cpu: 0.25
+      memory: 512Mi
+    requests:
+      cpu: 0.25
+      memory: 512Mi
+  octolyticsCore:
+    limits:
+      cpu: 1
+      memory: 2048Mi
+    requests:
+      cpu: 1
+      memory: 2048Mi
+secrets:
+  #- env: credentials.json
+  #  key: octolytics-push-manager-prod-firebase
+  #  mountPath: /usr/src/app/config
+  - env: DATABASE_USERNAME
+    key: octolytics-octolytics-core-develop-database-username
+  - env: DATABASE_PASSWORD
+    key: octolytics-octolytics-core-develop-database-password
+  - env: SALT_PASSWORD
+    key: octolytics-octolytics-core-api-salt
+  - env: SECRET_KEY
+    key: octolytics-octolytics-core-api-secret
+  - env: API_TOKEN_AUTH_ALTAN
+    key: octolytics-octolytics-core-api-token-auth-altan
+  - env: ARCHITECTURE_ID
+    key: octolytics-octolytics-core-architecture-id
+  - env: OC_CYPHER_SECRET_KEY
+    key: octolytics-octolytics-core-cypher-secret-key
+  - env: TWILIO_ACCOUNT_SID
+    key: octolytics-core-twilio-account-sid
+  - env: TWILIO_AUTH_TOKEN
+    key: octolytics-core-twilio-auth-token
+  - env: TWILIO_PHONE_NUMBER
+    key: octolytics-core-twilio-phone-number
+  - env: SPRING_PROFILE_ACTIVE
+    key: octolytics-octolytics-core-develop-spring-profile-active
+  - env: AUTH_APP_CLIENT_ID
+    key: octolytics-octolytics-core-auth-app-client-id
+  - env: AUTH_APP_CLIENT_SECRET
+    key: octolytics-octolytics-core-auth-app-client-secret
+  - env: AUTH_APP_USERNAME
+    key: octolytics-octolytics-core-auth-app-username
+  - env: AUTH_APP_PASSWORD
+    key: octolytics-octolytics-core-auth-app-password
+service:
+  port: 8080
+  type: ClusterIP
+serviceAccount:
+  annotations:
+    iam.gke.io/gcp-service-account: octolytics-us-central1-sa@octolytics-core.iam.gserviceaccount.com
+  create: true
+  name: octolytics-core
 
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  targetMemoryUtilizationPercentage: 80
-
-
+podAnnotations: {}
+imagePullSecrets: {}
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+affinity: {}
+tolerations: {}

@@ -37,12 +37,14 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-          {{- range $k, $v := .Values.secrets }}
-            - name: {{ $v.env }}
+          {{- range .Values.secrets }}
+          {{- if not .mountPath }}
+            - name: {{ .env }}
               valueFrom:
                 secretKeyRef:
                   name: {{ include "octolytics-core.fullname" $ }}
-                  key: {{ $v.env }}
+                  key: {{ .env }}
+          {{- end }}
           {{- end }}
           {{- range $k, $v := .Values.env_variables }}
             - name: {{ $v.env }}
@@ -70,6 +72,22 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources.octolyticsCore | nindent 12 }}
+          {{- /* Create a list of secrets that have a mountPath */}}
+          {{- $secretsWithMountPath := list -}}
+          {{- range .Values.secrets -}}
+          {{- if .mountPath -}}
+          {{- $secretsWithMountPath = append $secretsWithMountPath . -}}
+          {{- end -}}
+          {{- end -}}
+          {{- /* Only add volumeMounts if there are secrets to mount */}}
+          {{- if gt (len $secretsWithMountPath) 0 }}
+          volumeMounts:
+          {{- range $secretsWithMountPath }}
+            - name: secrets-volume-mount
+              mountPath: "{{ .mountPath }}"
+              readOnly: true
+          {{- end }}
+          {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -81,4 +99,11 @@ spec:
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* Only add the volume if there are secrets to mount */}}
+      {{- if gt (len $secretsWithMountPath) 0 }}
+      volumes:
+        - name: secrets-volume-mount
+          secret:
+            secretName: {{ include "octolytics-core.fullname" . }}-mount
       {{- end }}
