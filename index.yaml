@@ -3,6 +3,16 @@ entries:
   metabase:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2025-10-20T14:25:12.341083318Z"
+    description: A Helm chart for Kubernetes
+    digest: 13c66b94fa8be8023ce930300d943c695c7db0a23c7f8ce8a2756a8dd237f749
+    name: metabase
+    type: application
+    urls:
+    - https://github.com/Octolytics-SDK/charts/releases/download/metabase-0.0.7/metabase-0.0.7.tgz
+    version: 0.0.7
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-07-31T14:27:46.19790733Z"
     description: A Helm chart for Kubernetes
     digest: 15e4fab285fd489b57bf09417bbb7f03f4aec5afe0e125346496e3abc782b11f
@@ -193,4 +203,4 @@ entries:
     urls:
     - https://github.com/Octolytics-SDK/charts/releases/download/octolytics-core-0.1.0/octolytics-core-0.1.0.tgz
     version: 0.1.0
-generated: "2025-08-17T17:08:38.604954163Z"
+generated: "2025-10-20T14:25:12.341226854Z"
