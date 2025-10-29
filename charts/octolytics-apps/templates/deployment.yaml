@@ -1,0 +1,197 @@
+{{- /* --- Define lists of ALL secrets with mountPaths --- */}}
+{{- $fullName := include "octolytics-app.fullname" . -}}
+{{- $globalSecretsWithMountPath := list -}}
+{{- range .Values.secrets -}}
+{{- if .mountPath -}}
+{{- $globalSecretsWithMountPath = append $globalSecretsWithMountPath . -}}
+{{- end -}}
+{{- end -}}
+
+{{- $allContainerSecretsWithMountPath := list -}}
+{{- range .Values.containers }}
+{{- $cName := .name }}
+{{- range .secrets }}
+{{- if .mountPath }}
+{{- $item := dict "containerName" $cName "secret" . -}}
+{{- $allContainerSecretsWithMountPath = append $allContainerSecretsWithMountPath $item -}}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- /* --- Define container-specific list of mounted secrets --- */}}
+{{- $containerSecretsWithMountPath := list -}}
+{{- range .secrets -}}
+{{- if .mountPath -}}
+{{- $containerSecretsWithMountPath = append $containerSecretsWithMountPath . -}}
+{{- end -}}
+{{- end -}}
+{{- /* --- End list definitions --- */}}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "octolytics-app.fullname" . }}
+  labels:
+    {{- include "octolytics-app.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "octolytics-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "octolytics-app.selectorLabels" . | nindent 8 }}
+        {{- with .Values.extraLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "octolytics-app.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        {{- range .Values.containers }}
+        {{- $containerName := .name }}
+        - name: {{ $containerName }}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: "{{ .image.repository }}:{{ .image.tag | default $.Chart.AppVersion }}"
+          imagePullPolicy: {{ .image.pullPolicy }}
+          env:
+          {{- /* Global Envs */}}
+          {{- range $.Values.envs }}
+            - name: {{ .env }}
+              value: {{ .value | quote }}
+          {{- end }}
+          {{- /* Container Envs */}}
+          {{- range .envs }}
+            - name: {{ .env }}
+              value: {{ .value | quote }}
+          {{- end }}
+
+          {{- /* Global Secrets (as env) */}}
+          {{- range $.Values.secrets }}
+          {{- if not .mountPath }}
+            - name: {{ .env }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}
+                  key: {{ .env }}
+          {{- end }}
+          {{- end }}
+
+          {{- /* Container Secrets (as env) */}}
+          {{- $containerSecretsEnv := list -}}
+          {{- range .secrets -}}{{- if not .mountPath -}}{{- $containerSecretsEnv = append $containerSecretsEnv . -}}{{- end -}}{{- end -}}
+          {{- if gt (len $containerSecretsEnv) 0 }}
+          {{- range $containerSecretsEnv }}
+            - name: {{ .env }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-{{ $containerName }}
+                  key: {{ .env }}
+          {{- end }}
+          {{- end }}
+
+          {{- if .service.enabled }}
+          ports:
+            - name: http
+              containerPort: {{ .service.port }}
+              protocol: TCP
+          {{- end }}
+          
+          {{- if .healthcheck }}
+          livenessProbe:
+            initialDelaySeconds: {{ .healthcheck.initialWait | default "30"}}
+            periodSeconds: {{ .healthcheck.period | default "10" }}
+            failureThreshold: {{ .healthcheck.failures | default "3" }}
+            timeoutSeconds: {{ .healthcheck.timeout | default "30" }}
+            httpGet:
+              path: {{ .healthcheck.path }}
+              port: http
+          readinessProbe:
+            initialDelaySeconds: {{ .healthcheck.initialWait | default "30" }}
+            periodSeconds: {{ .healthcheck.period | default "10" }}
+            timeoutSeconds: {{ .healthcheck.timeout | default "30" }}
+            failureThreshold: {{ .healthcheck.failures | default "3" }}
+            httpGet:
+              path: {{ .healthcheck.path }}
+              port: http
+          {{- end }}
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+
+          
+
+          {{- /* --- Check if volumeMounts block is needed --- */}}
+          {{- if or $.Values.volumeMounts .volumeMounts (gt (len $globalSecretsWithMountPath) 0) (gt (len $containerSecretsWithMountPath) 0) }}
+          volumeMounts:
+          {{- /* Global volumeMounts */}}
+          {{- if $.Values.volumeMounts }}
+          {{- toYaml $.Values.volumeMounts | nindent 12 }}
+          {{- end }}
+          {{- /* Per-container volumeMounts */}}
+          {{- if .volumeMounts }}
+          {{- toYaml .volumeMounts | nindent 12 }}
+          {{- end }}
+
+          {{- /* Global secret mounts */}}
+          {{- if gt (len $globalSecretsWithMountPath) 0 }}
+          {{- range $globalSecretsWithMountPath }}
+            - name: global-secrets-volume-mount
+              mountPath: "{{ .mountPath }}"
+              readOnly: true
+          {{- end }}
+          {{- end }}
+
+          {{- /* Per-container secret mounts */}}
+          {{- if gt (len $containerSecretsWithMountPath) 0 }}
+          {{- range $containerSecretsWithMountPath }}
+            - name: container-secrets-{{ $containerName }}
+              mountPath: "{{ .mountPath }}"
+              readOnly: true
+          {{- end }}
+          {{- end }}
+          {{- end }} {{/* end if volumeMounts block needed */}}
+        {{- end }} {{/* end container loop */}}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- $volumes := .Values.volumes | default list -}}
+      {{- if gt (len $globalSecretsWithMountPath) 0 -}}
+      {{- $globalVol := dict "name" "global-secrets-volume-mount" "secret" (dict "secretName" (printf "%s-mount" $fullName)) -}}
+      {{- $volumes = append $volumes $globalVol -}}
+      {{- end -}}
+      {{- $processedContainers := dict -}}
+      {{- range $allContainerSecretsWithMountPath -}}
+      {{- $cName := .containerName -}}
+      {{- if not (hasKey $processedContainers $cName) -}}
+      {{- $_ := set $processedContainers $cName true -}}
+      {{- $containerVol := dict "name" (printf "container-secrets-%s" $cName) "secret" (dict "secretName" (printf "%s-%s-mount" $fullName $cName)) -}}
+      {{- $volumes = append $volumes $containerVol -}}
+      {{- end -}}
+      {{- end -}}
+      {{- if gt (len $volumes) 0 -}}
+      {{ "\n" -}}
+      volumes:
+        {{- toYaml $volumes | nindent 8 -}}
+      {{- end -}}

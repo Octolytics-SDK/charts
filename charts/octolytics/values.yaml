@@ -79,9 +79,9 @@ resources:
       cpu: 1
       memory: 2048Mi
 secrets:
-  #- env: credentials.json
-  #  key: octolytics-push-manager-prod-firebase
-  #  mountPath: /usr/src/app/config
+  - env: credentials.json
+    key: octolytics-push-manager-prod-firebase
+    mountPath: /usr/src/app/config
   - env: DATABASE_USERNAME
     key: octolytics-octolytics-core-develop-database-username
   - env: DATABASE_PASSWORD

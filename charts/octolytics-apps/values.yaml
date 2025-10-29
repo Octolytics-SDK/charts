@@ -1,0 +1,148 @@
+fullnameOverride: null
+application:
+  environment: develop
+  name: octolytics-core
+autoscaling:
+  enabled: true
+  maxReplicas: 5
+  minReplicas: 1
+  targetCPUUtilizationPercentage: 25
+  targetMemoryUtilizationPercentage: 80
+client: octolytics
+extraLabels:
+  admission.datadoghq.com/enabled: "true"
+  tags.datadoghq.com/env: develop
+  tags.datadoghq.com/service: octolytics-octolytics-core
+replicaCount: 1
+serviceAccount:
+  annotations:
+    iam.gke.io/gcp-service-account: octolytics-us-central1-sa@octolytics-core.iam.gserviceaccount.com
+  create: true
+  name: octolytics-core
+ingress:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod-http
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+  enabled: true
+  hosts:
+    - api.octolytics.develop.octolytics-core.com
+secrets:
+  - env: SALT_PASSWORD
+    key: octolytics-octolytics-core-api-salt
+  - env: SECRET_KEY
+    key: octolytics-octolytics-core-api-secret
+  - env: API_TOKEN_AUTH_ALTAN
+    key: octolytics-octolytics-core-api-token-auth-altan
+  - env: ARCHITECTURE_ID
+    key: octolytics-octolytics-core-architecture-id
+  - env: OC_CYPHER_SECRET_KEY
+    key: octolytics-octolytics-core-cypher-secret-key
+  - env: TWILIO_ACCOUNT_SID
+    key: octolytics-core-twilio-account-sid
+  - env: TWILIO_AUTH_TOKEN
+    key: octolytics-core-twilio-auth-token
+  - env: TWILIO_PHONE_NUMBER
+    key: octolytics-core-twilio-phone-number
+  - env: SPRING_PROFILE_ACTIVE
+    key: octolytics-octolytics-core-develop-spring-profile-active
+  - env: AUTH_APP_CLIENT_ID
+    key: octolytics-octolytics-core-auth-app-client-id
+  - env: AUTH_APP_CLIENT_SECRET
+    key: octolytics-octolytics-core-auth-app-client-secret
+  - env: AUTH_APP_USERNAME
+    key: octolytics-octolytics-core-auth-app-username
+  - env: AUTH_APP_PASSWORD
+    key: octolytics-octolytics-core-auth-app-password
+envs:
+  - env: CLOUD_SQL_CONNECTION_NAME
+    value: octolytics-core:us-central1:octolytics-core-develop
+  - env: CLOUD_SQL_PROXY_USE_TCP
+    value: "true"
+  - env: DB_CONN_IDLE_TIMEOUT
+    value: '"10000"'
+  - env: DB_CONN_MAX
+    value: '"30000"'
+  - env: DD_SERVICE
+    value: octolytics-octolytics-core
+  - env: DD_ENV
+    value: develop
+  - env: DATABASE_URL_RO
+    value: jdbc:postgresql://10.100.17.55:5432/octolytics_develop
+  - env: DATABASE_URL
+    value: jdbc:postgresql://10.100.17.7:5432/octolytics_develop
+  - env: AVAILABLE_MEM
+    value: '"1948"'
+podAnnotations: {}
+imagePullSecrets: {}
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+affinity: {}
+tolerations: {}
+volumes:
+  - name: tmp
+    emptyDir: {}
+containers:
+  - name: sidecar
+    image:
+      repository: us-central1-docker.pkg.dev/octolytics-core/octolytics-repo/cloud-sql-proxy
+      tag: 1.33.3
+      pullPolicy: IfNotPresent
+    ingress:
+      enabled: false
+    healthcheck: {}
+    secrets: []
+    service:
+      enabled: false
+    envs:
+      - env: LOLOLOLO_LOLOLO
+        value: "FOO"
+    resources:
+      limits:
+        cpu: 250m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  - name: api
+    ingress:
+      enabled: true
+      hosts:
+        - api.octolytics.develop.octolytics-core.com
+      path: /
+    volumeMounts:
+      - name: tmp
+        mountPath: /tmp
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 2048Mi
+      requests:
+        cpu: 1024m
+        memory: 2048Mi
+    service:
+      enabled: true
+      port: 8080
+      type: ClusterIP
+    secrets:
+      - env: credentials.json
+        key: octolytics-push-manager-prod-firebase
+        mountPath: /usr/src/app/config
+      - env: FOO_BAR
+        key: octolytics-octolytics-core-develop-foo-bar
+    envs:
+      - env: ANOTHER_ENV_VAR
+        value: some-value
+    healthcheck:
+      failures: 3
+      initialWait: 10
+      path: /octolytics/actuator/health
+      period: 10
+      timeout: 30
+    image:
+      pullPolicy: IfNotPresent
+      repository: us-central1-docker.pkg.dev/octolytics-core/octolytics-repo/core
+      tag: 398106f9d099b05464bbb8bce365c88a064aa993

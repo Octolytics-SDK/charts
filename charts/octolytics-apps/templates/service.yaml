@@ -1,0 +1,33 @@
+{{- $appName := include "octolytics-app.name" . -}}
+{{- $labels := include "octolytics-app.labels" . -}}
+{{- $selectorLabels := include "octolytics-app.selectorLabels" . -}}
+
+{{- range .Values.containers }}
+{{- if .service.enabled }}
+{{- /* Create the service name.
+  If container name is 'app', use the appName directly.
+  Otherwise, use appName-containerName.
+*/}}
+{{- $serviceName := $appName }}
+{{- if ne .name "app" }}
+{{- $serviceName = printf "%s-%s" $appName .name }}
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $serviceName }}
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: {{ .name }}
+spec:
+  type: {{ .service.type }}
+  ports:
+    - port: {{ .service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- $selectorLabels | nindent 4 }}
+{{- end }}
+{{- end }}

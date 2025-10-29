@@ -1,0 +1,454 @@
+---
+# Source: octolytics-app/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: octolytics-core
+  labels:
+    helm.sh/chart: octolytics-app-0.1.0
+    app.kubernetes.io/name: octolytics-core
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    iam.gke.io/gcp-service-account: octolytics-us-central1-sa@octolytics-core.iam.gserviceaccount.com
+---
+# Source: octolytics-app/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: octolytics-core-api
+  labels:
+    helm.sh/chart: octolytics-app-0.1.0
+    app.kubernetes.io/name: octolytics-core
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: octolytics-core
+    app.kubernetes.io/instance: release-name
+---
+# Source: octolytics-app/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octolytics-core
+  labels:
+    helm.sh/chart: octolytics-app-0.1.0
+    app.kubernetes.io/name: octolytics-core
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: octolytics-core
+      app.kubernetes.io/instance: release-name
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: octolytics-core
+        app.kubernetes.io/instance: release-name
+        admission.datadoghq.com/enabled: "true"
+        tags.datadoghq.com/env: develop
+        tags.datadoghq.com/service: octolytics-octolytics-core
+    spec:
+      serviceAccountName: octolytics-core
+      securityContext: {}
+      containers:
+        - name: sidecar
+          securityContext: {}
+          image: "us-central1-docker.pkg.dev/octolytics-core/octolytics-repo/cloud-sql-proxy:1.33.3"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CLOUD_SQL_CONNECTION_NAME
+              value: "octolytics-core:us-central1:octolytics-core-develop"
+            - name: CLOUD_SQL_PROXY_USE_TCP
+              value: "true"
+            - name: DB_CONN_IDLE_TIMEOUT
+              value: '"10000"'
+            - name: DB_CONN_MAX
+              value: '"30000"'
+            - name: DD_SERVICE
+              value: "octolytics-octolytics-core"
+            - name: DD_ENV
+              value: "develop"
+            - name: DATABASE_URL_RO
+              value: "jdbc:postgresql://10.100.17.55:5432/octolytics_develop"
+            - name: DATABASE_URL
+              value: "jdbc:postgresql://10.100.17.7:5432/octolytics_develop"
+            - name: AVAILABLE_MEM
+              value: '"1948"'
+            - name: LOLOLOLO_LOLOLO
+              value: "FOO"
+            - name: SALT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: SALT_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: SECRET_KEY
+            - name: API_TOKEN_AUTH_ALTAN
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: API_TOKEN_AUTH_ALTAN
+            - name: ARCHITECTURE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: ARCHITECTURE_ID
+            - name: OC_CYPHER_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: OC_CYPHER_SECRET_KEY
+            - name: TWILIO_ACCOUNT_SID
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: TWILIO_ACCOUNT_SID
+            - name: TWILIO_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: TWILIO_AUTH_TOKEN
+            - name: TWILIO_PHONE_NUMBER
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: TWILIO_PHONE_NUMBER
+            - name: SPRING_PROFILE_ACTIVE
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: SPRING_PROFILE_ACTIVE
+            - name: AUTH_APP_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: AUTH_APP_CLIENT_ID
+            - name: AUTH_APP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: AUTH_APP_CLIENT_SECRET
+            - name: AUTH_APP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: AUTH_APP_USERNAME
+            - name: AUTH_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: AUTH_APP_PASSWORD
+          resources:
+            limits:
+              cpu: 250m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+        - name: api
+          securityContext: {}
+          image: "us-central1-docker.pkg.dev/octolytics-core/octolytics-repo/core:398106f9d099b05464bbb8bce365c88a064aa993"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CLOUD_SQL_CONNECTION_NAME
+              value: "octolytics-core:us-central1:octolytics-core-develop"
+            - name: CLOUD_SQL_PROXY_USE_TCP
+              value: "true"
+            - name: DB_CONN_IDLE_TIMEOUT
+              value: '"10000"'
+            - name: DB_CONN_MAX
+              value: '"30000"'
+            - name: DD_SERVICE
+              value: "octolytics-octolytics-core"
+            - name: DD_ENV
+              value: "develop"
+            - name: DATABASE_URL_RO
+              value: "jdbc:postgresql://10.100.17.55:5432/octolytics_develop"
+            - name: DATABASE_URL
+              value: "jdbc:postgresql://10.100.17.7:5432/octolytics_develop"
+            - name: AVAILABLE_MEM
+              value: '"1948"'
+            - name: ANOTHER_ENV_VAR
+              value: "some-value"
+            - name: SALT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: SALT_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: SECRET_KEY
+            - name: API_TOKEN_AUTH_ALTAN
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: API_TOKEN_AUTH_ALTAN
+            - name: ARCHITECTURE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: ARCHITECTURE_ID
+            - name: OC_CYPHER_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: OC_CYPHER_SECRET_KEY
+            - name: TWILIO_ACCOUNT_SID
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: TWILIO_ACCOUNT_SID
+            - name: TWILIO_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: TWILIO_AUTH_TOKEN
+            - name: TWILIO_PHONE_NUMBER
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: TWILIO_PHONE_NUMBER
+            - name: SPRING_PROFILE_ACTIVE
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: SPRING_PROFILE_ACTIVE
+            - name: AUTH_APP_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: AUTH_APP_CLIENT_ID
+            - name: AUTH_APP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: AUTH_APP_CLIENT_SECRET
+            - name: AUTH_APP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: AUTH_APP_USERNAME
+            - name: AUTH_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core
+                  key: AUTH_APP_PASSWORD
+            - name: FOO_BAR
+              valueFrom:
+                secretKeyRef:
+                  name: octolytics-core-api
+                  key: FOO_BAR
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 30
+            httpGet:
+              path: /octolytics/actuator/health
+              port: http
+          readinessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 30
+            failureThreshold: 3
+            httpGet:
+              path: /octolytics/actuator/health
+              port: http
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+            - mountPath: /usr/src/app/config
+              name: container-secrets-api
+              readOnly: true
+          resources:
+            limits:
+              cpu: 1024m
+              memory: 2048Mi
+            requests:
+              cpu: 1024m
+              memory: 2048Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: container-secrets-api
+          secret:
+            secretName: octolytics-core-api-mount
+---
+# Source: octolytics-app/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: octolytics-core
+  labels:
+    helm.sh/chart: octolytics-app-0.1.0
+    app.kubernetes.io/name: octolytics-core
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  minReplicas: 1
+  maxReplicas: 5
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: octolytics-core
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          averageUtilization: 25
+          type: Utilization
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          averageUtilization: 80
+          type: Utilization
+---
+# Source: octolytics-app/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: octolytics-core
+  labels:
+    helm.sh/chart: octolytics-app-0.1.0
+    app.kubernetes.io/name: octolytics-core
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod-http
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+spec:
+  tls:
+    - hosts:
+        - "api.octolytics.develop.octolytics-core.com"
+      secretName: api-octolytics-develop-octolytics-core-com-tls
+
+  rules:
+    - host: "api.octolytics.develop.octolytics-core.com"
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: octolytics-core-api
+                port:
+                  number: 8080
+---
+# Source: octolytics-app/templates/external-secret.yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: octolytics-core
+  namespace: default
+spec:
+  refreshInterval: "15s"
+  secretStoreRef:
+    name: gcp-backend
+    kind: ClusterSecretStore
+  target:
+    name: octolytics-core
+  data:
+    - secretKey: SALT_PASSWORD
+      remoteRef:
+        key: octolytics-octolytics-core-api-salt
+    - secretKey: SECRET_KEY
+      remoteRef:
+        key: octolytics-octolytics-core-api-secret
+    - secretKey: API_TOKEN_AUTH_ALTAN
+      remoteRef:
+        key: octolytics-octolytics-core-api-token-auth-altan
+    - secretKey: ARCHITECTURE_ID
+      remoteRef:
+        key: octolytics-octolytics-core-architecture-id
+    - secretKey: OC_CYPHER_SECRET_KEY
+      remoteRef:
+        key: octolytics-octolytics-core-cypher-secret-key
+    - secretKey: TWILIO_ACCOUNT_SID
+      remoteRef:
+        key: octolytics-core-twilio-account-sid
+    - secretKey: TWILIO_AUTH_TOKEN
+      remoteRef:
+        key: octolytics-core-twilio-auth-token
+    - secretKey: TWILIO_PHONE_NUMBER
+      remoteRef:
+        key: octolytics-core-twilio-phone-number
+    - secretKey: SPRING_PROFILE_ACTIVE
+      remoteRef:
+        key: octolytics-octolytics-core-develop-spring-profile-active
+    - secretKey: AUTH_APP_CLIENT_ID
+      remoteRef:
+        key: octolytics-octolytics-core-auth-app-client-id
+    - secretKey: AUTH_APP_CLIENT_SECRET
+      remoteRef:
+        key: octolytics-octolytics-core-auth-app-client-secret
+    - secretKey: AUTH_APP_USERNAME
+      remoteRef:
+        key: octolytics-octolytics-core-auth-app-username
+    - secretKey: AUTH_APP_PASSWORD
+      remoteRef:
+        key: octolytics-octolytics-core-auth-app-password
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: octolytics-core-api
+  namespace: default
+spec:
+  refreshInterval: "15s"
+  secretStoreRef:
+    name: gcp-backend
+    kind: ClusterSecretStore
+  target:
+    name: octolytics-core-api
+  data:
+    - secretKey: FOO_BAR
+      remoteRef:
+        key: octolytics-octolytics-core-develop-foo-bar
+---
+# Source: octolytics-app/templates/external-secret.yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: octolytics-core-api-mount
+  namespace: default
+spec:
+  refreshInterval: "15s"
+  secretStoreRef:
+    name: gcp-backend
+    kind: ClusterSecretStore
+  target:
+    name: octolytics-core-api-mount
+  data:
+    - secretKey: credentials.json
+      remoteRef:
+        key: octolytics-push-manager-prod-firebase

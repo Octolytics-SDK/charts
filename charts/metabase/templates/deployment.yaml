@@ -80,6 +80,15 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources.metabase | nindent 12 }}
+          volumeMounts:
+          - name: {{ include "metabase.fullname" . }}-configs
+            mountPath: /etc/config
+          - name: {{ include "metabase.fullname" . }}-secrets
+            mountPath: /etc/secret
+            readOnly: true
+          {{- if .Values.extraVolumeMounts -}}
+          {{ toYaml .Values.extraVolumeMounts | nindent 10 }}
+          {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
