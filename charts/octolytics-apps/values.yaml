@@ -32,49 +32,13 @@ ingress:
 secrets:
   - env: SALT_PASSWORD
     key: octolytics-octolytics-core-api-salt
-  - env: SECRET_KEY
-    key: octolytics-octolytics-core-api-secret
-  - env: API_TOKEN_AUTH_ALTAN
-    key: octolytics-octolytics-core-api-token-auth-altan
-  - env: ARCHITECTURE_ID
-    key: octolytics-octolytics-core-architecture-id
-  - env: OC_CYPHER_SECRET_KEY
-    key: octolytics-octolytics-core-cypher-secret-key
-  - env: TWILIO_ACCOUNT_SID
-    key: octolytics-core-twilio-account-sid
-  - env: TWILIO_AUTH_TOKEN
-    key: octolytics-core-twilio-auth-token
-  - env: TWILIO_PHONE_NUMBER
-    key: octolytics-core-twilio-phone-number
-  - env: SPRING_PROFILE_ACTIVE
-    key: octolytics-octolytics-core-develop-spring-profile-active
-  - env: AUTH_APP_CLIENT_ID
-    key: octolytics-octolytics-core-auth-app-client-id
-  - env: AUTH_APP_CLIENT_SECRET
-    key: octolytics-octolytics-core-auth-app-client-secret
-  - env: AUTH_APP_USERNAME
-    key: octolytics-octolytics-core-auth-app-username
-  - env: AUTH_APP_PASSWORD
-    key: octolytics-octolytics-core-auth-app-password
+  - env: credentials.json
+    key: octolytics-push-manager-prod-firebase
+    mountPath: /usr/src/app/config
 envs:
   - env: CLOUD_SQL_CONNECTION_NAME
     value: octolytics-core:us-central1:octolytics-core-develop
-  - env: CLOUD_SQL_PROXY_USE_TCP
-    value: "true"
-  - env: DB_CONN_IDLE_TIMEOUT
-    value: '"10000"'
-  - env: DB_CONN_MAX
-    value: '"30000"'
-  - env: DD_SERVICE
-    value: octolytics-octolytics-core
-  - env: DD_ENV
-    value: develop
-  - env: DATABASE_URL_RO
-    value: jdbc:postgresql://10.100.17.55:5432/octolytics_develop
-  - env: DATABASE_URL
-    value: jdbc:postgresql://10.100.17.7:5432/octolytics_develop
-  - env: AVAILABLE_MEM
-    value: '"1948"'
+
 podAnnotations: {}
 imagePullSecrets: {}
 podSecurityContext: {}
@@ -85,6 +49,9 @@ tolerations: {}
 volumes:
   - name: tmp
     emptyDir: {}
+  - name: anotherDir
+    emptyDir: {}
+volumeMounts: []
 containers:
   - name: sidecar
     image:
@@ -114,7 +81,7 @@ containers:
         - api.octolytics.develop.octolytics-core.com
       path: /
     volumeMounts:
-      - name: tmp
+      - name: anotherDir
         mountPath: /tmp
     resources:
       limits:
@@ -128,14 +95,11 @@ containers:
       port: 8080
       type: ClusterIP
     secrets:
-      - env: credentials.json
-        key: octolytics-push-manager-prod-firebase
-        mountPath: /usr/src/app/config
       - env: FOO_BAR
         key: octolytics-octolytics-core-develop-foo-bar
     envs:
-      - env: ANOTHER_ENV_VAR
-        value: some-value
+      - env: API_ENV_VAR
+        value: some_value
     healthcheck:
       failures: 3
       initialWait: 10

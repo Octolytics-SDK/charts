@@ -1,71 +1,42 @@
-{{- if .Values.ingress.enabled -}}
-{{- $fullName := include "octolytics-app.fullname" . -}}
-
-{{- /* --- Gather all hosts for TLS --- */}}
-{{- $allHosts := list -}}
-{{- range .Values.containers }}
-{{- if .ingress.enabled }}
-{{- range .ingress.hosts }}
-{{- $allHosts = append $allHosts . -}}
-{{- end }}
-{{- end }}
-{{- end -}}
-{{- $uniqueHosts := $allHosts | uniq -}}
-{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
+{{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
-{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
-apiVersion: networking.k8s.io/v1beta1
-{{- else -}}
-apiVersion: extensions/v1beta1
-{{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: {{ .Values.application.name }}
   labels:
-    {{- include "octolytics-app.labels" . | nindent 4 }}
+{{- include "octolytics-app.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- /* --- New TLS block based on all found hosts --- */}}
-  {{- if $uniqueHosts }}
   tls:
-    {{- range $uniqueHosts }}
     - hosts:
+      {{- range .Values.ingress.hosts }}
         - {{ . | quote }}
-      secretName: {{ . | replace "." "-" }}-tls
-    {{- end }}
-  {{- end }}
-  
+      {{- end }}
+      {{/* This secretName is hardcoded in your result.yaml, so we hardcode it here. */}}
+      secretName: api-octolytics-develop-octolytics-core-com-tls
   rules:
-    {{- range .Values.containers }}
-    {{- if .ingress.enabled }}
-    {{- $containerName := .name -}}
-    {{- $serviceName := printf "%s-%s" $fullName $containerName -}}
-    {{- $servicePort := .service.port -}}
-    {{- $ingressPath := .ingress.path | default "/" -}}
-    {{- $ingressPathType := .ingress.pathType | default "ImplementationSpecific" -}}
-    
-    {{- range .ingress.hosts }}
+    {{- range .Values.ingress.hosts }}
     - host: {{ . | quote }}
       http:
         paths:
-          - path: {{ $ingressPath }}
-            {{- if and $ingressPathType (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
-            pathType: {{ $ingressPathType }}
+          {{- /* Find the container with ingress enabled to set the backend */}}
+          {{- $serviceName := "" }}
+          {{- $servicePort := "" }}
+          {{- range $.Values.containers }}
+            {{- if .ingress.enabled }}
+              {{- $serviceName = (printf "%s-%s" $.Values.application.name .name) }}
+              {{- $servicePort = .service.port }}
             {{- end }}
+          {{- end }}
+          - path: /
+            pathType: ImplementationSpecific
             backend:
-              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
                 name: {{ $serviceName }}
                 port:
                   number: {{ $servicePort }}
-              {{- else }}
-              serviceName: {{ $serviceName }}
-              servicePort: {{ $servicePort }}
-              {{- end }}
-    {{- end }} {{/* range .ingress.hosts */}}
-    {{- end }} {{/* if .ingress.enabled */}}
-    {{- end }} {{/* range .Values.containers */}}
-{{- end }} {{/* if .Values.ingress.enabled */}}
+    {{- end }}
+{{- end }}
