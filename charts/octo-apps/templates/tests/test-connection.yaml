@@ -1,0 +1,31 @@
+{{- if .Values.tests.enabled -}}
+{{- $root := . -}}
+{{- $serviceName := "" -}}
+{{- $servicePort := "" -}}
+{{- range $container := .Values.containers -}}
+{{- if eq $container.name $root.Values.tests.container -}}
+{{- $serviceName = include "octo-apps.containerServiceName" (dict "root" $root "container" $container) -}}
+{{- $service := default dict $container.service -}}
+{{- $ports := default (default (list) $container.ports) $service.ports -}}
+{{- if gt (len $ports) 0 -}}
+{{- $firstPort := first $ports -}}
+{{- $servicePort = default (default $firstPort.containerPort $firstPort.port) $firstPort.name -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "octo-apps.fullname" . }}-test-connection"
+  labels:
+    {{- include "octo-apps.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ["wget"]
+      args: ["{{ required "tests.container must reference a service-enabled container" $serviceName }}:{{ required "tests.container must expose a service port" $servicePort }}"]
+  restartPolicy: Never
+{{- end }}

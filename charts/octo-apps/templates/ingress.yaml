@@ -1,0 +1,51 @@
+{{- if .Values.ingress.enabled -}}
+{{- $root := . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "octo-apps.fullname" . }}
+  labels:
+    {{- include "octo-apps.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $host := .Values.ingress.hosts }}
+    - host: {{ $host.host | quote }}
+      http:
+        paths:
+          {{- range $path := $host.paths }}
+          {{- $pathService := default dict $path.service }}
+          {{- $backend := dict "name" (default "" $pathService.name) "port" (default $path.port $pathService.port) }}
+          {{- if and (not (get $backend "name")) $path.container }}
+          {{- range $container := $root.Values.containers }}
+          {{- if eq $container.name $path.container }}
+          {{- $_ := set $backend "name" (include "octo-apps.containerServiceName" (dict "root" $root "container" $container)) }}
+          {{- $service := default dict $container.service }}
+          {{- $ports := default (default (list) $container.ports) $service.ports }}
+          {{- if and (not (get $backend "port")) (gt (len $ports) 0) }}
+          {{- $firstPort := first $ports }}
+          {{- $_ := set $backend "port" (default (default $firstPort.containerPort $firstPort.port) $firstPort.name) }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          - path: {{ default "/" $path.path }}
+            pathType: {{ default "Prefix" $path.pathType }}
+            backend:
+              service:
+                name: {{ required (printf "ingress path for host %s requires service.name or container" $host.host) (get $backend "name") }}
+                port:
+                  {{- include "octo-apps.ingressBackendPort" (required (printf "ingress path for host %s requires service.port, port, or a service-enabled container port" $host.host) (get $backend "port")) | nindent 18 }}
+          {{- end }}
+    {{- end }}
+{{- end }}

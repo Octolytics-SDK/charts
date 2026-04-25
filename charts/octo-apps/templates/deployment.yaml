@@ -1,0 +1,302 @@
+{{- $root := . -}}
+{{- $containers := required "containers[] must contain at least one container" .Values.containers -}}
+{{- $globalEnvFrom := default (list) .Values.envFrom -}}
+{{- $globalEnvs := default (list) .Values.envs -}}
+{{- $globalSecrets := default (list) .Values.secrets -}}
+{{- $globalVolumeMounts := default (list) .Values.volumeMounts -}}
+{{- $globalVolumes := default (list) .Values.volumes -}}
+{{- $globalMountedSecrets := list -}}
+{{- range $globalSecrets -}}
+{{- if .mountPath -}}
+{{- $globalMountedSecrets = append $globalMountedSecrets . -}}
+{{- end -}}
+{{- end -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "octo-apps.fullname" . }}
+  labels:
+    {{- include "octo-apps.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "octo-apps.selectorLabels" . | nindent 6 }}
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "octo-apps.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.extraLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "octo-apps.serviceAccountName" . }}
+      {{- if ne .Values.serviceAccount.automountServiceAccountToken nil }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.runtimeClassName }}
+      runtimeClassName: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.schedulerName }}
+      schedulerName: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dnsPolicy }}
+      dnsPolicy: {{ . }}
+      {{- end }}
+      {{- with .Values.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        {{- range $container := $containers }}
+        {{- $containerSecrets := default (list) $container.secrets }}
+        {{- $containerEnvFrom := default (list) $container.envFrom }}
+        {{- $containerEnvs := default (list) $container.envs }}
+        {{- $containerVolumeMounts := default (list) $container.volumeMounts }}
+        {{- $mountedContainerSecrets := list }}
+        {{- range $containerSecrets }}
+        {{- if .mountPath }}
+        {{- $mountedContainerSecrets = append $mountedContainerSecrets . }}
+        {{- end }}
+        {{- end }}
+        {{- $hasEnv := false }}
+        {{- if gt (len $globalEnvs) 0 }}{{- $hasEnv = true }}{{- end }}
+        {{- if gt (len $containerEnvs) 0 }}{{- $hasEnv = true }}{{- end }}
+        {{- range $globalSecrets }}{{- if not .mountPath }}{{- $hasEnv = true }}{{- end }}{{- end }}
+        {{- range $containerSecrets }}{{- if not .mountPath }}{{- $hasEnv = true }}{{- end }}{{- end }}
+        {{- $hasVolumeMounts := false }}
+        {{- if gt (len $globalVolumeMounts) 0 }}{{- $hasVolumeMounts = true }}{{- end }}
+        {{- if gt (len $containerVolumeMounts) 0 }}{{- $hasVolumeMounts = true }}{{- end }}
+        {{- if gt (len $globalMountedSecrets) 0 }}{{- $hasVolumeMounts = true }}{{- end }}
+        {{- if gt (len $mountedContainerSecrets) 0 }}{{- $hasVolumeMounts = true }}{{- end }}
+        - name: {{ required "containers[].name is required" $container.name }}
+          image: {{ include "octo-apps.image" (dict "root" $root "image" $container.image) | quote }}
+          imagePullPolicy: {{ default "IfNotPresent" $container.image.pullPolicy }}
+          {{- with $container.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $container.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $container.workingDir }}
+          workingDir: {{ . | quote }}
+          {{- end }}
+          {{- with (default $root.Values.securityContext $container.securityContext) }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if or (gt (len $globalEnvFrom) 0) (gt (len $containerEnvFrom) 0) }}
+          envFrom:
+            {{- with $globalEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with $containerEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          {{- if $hasEnv }}
+          env:
+            {{- range $globalEnvs }}
+            - name: {{ include "octo-apps.itemName" . }}
+              {{- if hasKey . "valueFrom" }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ default "" .value | toString | quote }}
+              {{- end }}
+            {{- end }}
+            {{- range $containerEnvs }}
+            - name: {{ include "octo-apps.itemName" . }}
+              {{- if hasKey . "valueFrom" }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ default "" .value | toString | quote }}
+              {{- end }}
+            {{- end }}
+            {{- range $globalSecrets }}
+            {{- if not .mountPath }}
+            - name: {{ include "octo-apps.itemName" . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "octo-apps.globalSecretName" $root }}
+                  key: {{ include "octo-apps.itemName" . | quote }}
+                  {{- if hasKey . "optional" }}
+                  optional: {{ .optional }}
+                  {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- range $containerSecrets }}
+            {{- if not .mountPath }}
+            - name: {{ include "octo-apps.itemName" . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "octo-apps.containerSecretName" (dict "root" $root "container" $container) }}
+                  key: {{ include "octo-apps.itemName" . | quote }}
+                  {{- if hasKey . "optional" }}
+                  optional: {{ .optional }}
+                  {{- end }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- with $container.ports }}
+          ports:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $container.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $container.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $container.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $container.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $container.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if $hasVolumeMounts }}
+          volumeMounts:
+            {{- with $globalVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with $containerVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- range $globalMountedSecrets }}
+            - name: global-secrets
+              mountPath: {{ .mountPath | quote }}
+              readOnly: true
+              {{- with .subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
+              {{- with .subPathExpr }}
+              subPathExpr: {{ . | quote }}
+              {{- end }}
+              {{- with .mountPropagation }}
+              mountPropagation: {{ . }}
+              {{- end }}
+            {{- end }}
+            {{- range $mountedContainerSecrets }}
+            - name: {{ printf "container-secrets-%s" $container.name | trunc 63 | trimSuffix "-" }}
+              mountPath: {{ .mountPath | quote }}
+              readOnly: true
+              {{- with .subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
+              {{- with .subPathExpr }}
+              subPathExpr: {{ . | quote }}
+              {{- end }}
+              {{- with .mountPropagation }}
+              mountPropagation: {{ . }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- $hasContainerSecretVolumes := false }}
+      {{- range $containers }}
+      {{- range (default (list) .secrets) }}
+      {{- if .mountPath }}{{- $hasContainerSecretVolumes = true }}{{- end }}
+      {{- end }}
+      {{- end }}
+      {{- if or (gt (len $globalVolumes) 0) (gt (len $globalMountedSecrets) 0) $hasContainerSecretVolumes }}
+      volumes:
+        {{- with $globalVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if gt (len $globalMountedSecrets) 0 }}
+        - name: global-secrets
+          secret:
+            secretName: {{ include "octo-apps.globalSecretName" . }}
+            items:
+              {{- range $globalMountedSecrets }}
+              - key: {{ include "octo-apps.itemName" . | quote }}
+                path: {{ default (include "octo-apps.itemName" .) .path | quote }}
+                {{- with .mode }}
+                mode: {{ . }}
+                {{- end }}
+              {{- end }}
+        {{- end }}
+        {{- range $container := $containers }}
+        {{- $containerMountedSecrets := list }}
+        {{- range (default (list) $container.secrets) }}
+        {{- if .mountPath }}
+        {{- $containerMountedSecrets = append $containerMountedSecrets . }}
+        {{- end }}
+        {{- end }}
+        {{- if gt (len $containerMountedSecrets) 0 }}
+        - name: {{ printf "container-secrets-%s" $container.name | trunc 63 | trimSuffix "-" }}
+          secret:
+            secretName: {{ include "octo-apps.containerSecretName" (dict "root" $root "container" $container) }}
+            items:
+              {{- range $containerMountedSecrets }}
+              - key: {{ include "octo-apps.itemName" . | quote }}
+                path: {{ default (include "octo-apps.itemName" .) .path | quote }}
+                {{- with .mode }}
+                mode: {{ . }}
+                {{- end }}
+              {{- end }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

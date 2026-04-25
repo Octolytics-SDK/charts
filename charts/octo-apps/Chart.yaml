@@ -1,0 +1,6 @@
+apiVersion: v2
+name: octo-apps
+description: A containers-first Helm chart for Octolytics applications
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

@@ -1,0 +1,52 @@
+{{- $root := . -}}
+{{- range $container := required "containers[] must contain at least one container" .Values.containers }}
+{{- $service := default dict $container.service }}
+{{- if $service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "octo-apps.containerServiceName" (dict "root" $root "container" $container) }}
+  labels:
+    {{- include "octo-apps.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $container.name }}
+    {{- with $service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ default "ClusterIP" $service.type }}
+  {{- with $service.clusterIP }}
+  clusterIP: {{ . }}
+  {{- end }}
+  {{- with $service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- with $service.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- with $service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  ports:
+    {{- $ports := default (default (list) $container.ports) $service.ports }}
+    {{- range $port := $ports }}
+    - name: {{ default "http" $port.name }}
+      port: {{ default $port.containerPort $port.port }}
+      targetPort: {{ default (default $port.containerPort $port.port) $port.targetPort }}
+      protocol: {{ default "TCP" $port.protocol }}
+      {{- with $port.appProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
+      {{- with $port.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
+    {{- end }}
+  selector:
+    {{- include "octo-apps.selectorLabels" $root | nindent 4 }}
+{{- end }}
+{{- end }}
