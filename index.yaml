@@ -74,6 +74,16 @@ entries:
   octo-apps:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2026-04-25T22:24:48.514752Z"
+    description: A containers-first Helm chart for Octolytics applications
+    digest: 343368e6b8e30037776202e12859423f41b5e2570c6e2dfcbd9e0e06692caf5d
+    name: octo-apps
+    type: application
+    urls:
+    - https://github.com/Octolytics-SDK/charts/releases/download/octo-apps-0.1.1/octo-apps-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2026-04-25T18:26:01.443989145Z"
     description: A containers-first Helm chart for Octolytics applications
     digest: 0fb75f1afa78db7a6dde7b3f487d3c343dcf16d06c0b18b05ea78e8b09069f0d
@@ -255,4 +265,4 @@ entries:
     urls:
     - https://github.com/Octolytics-SDK/charts/releases/download/octolytics-core-0.1.0/octolytics-core-0.1.0.tgz
     version: 0.1.0
-generated: "2026-04-25T18:26:01.444040821Z"
+generated: "2026-04-25T22:24:48.514793701Z"
