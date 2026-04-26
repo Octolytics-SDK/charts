@@ -47,32 +47,9 @@ ingress:
           pathType: Prefix
           container: api
           port: http
-  tls:
-    - hosts:
-        - api.octolytics.develop.octolytics-core.com
-      secretName: api-octolytics-develop-octolytics-core-com-tls
+  tls: []
 
-envs:
-  - name: DB_CONN_TIMEOUT
-    value: "2000"
-  - name: DB_CONN_MIN_IDLE
-    value: "10"
-  - name: DB_POOL_SIZE
-    value: "100"
-  - name: DB_CONN_IDLE_TIMEOUT
-    value: "10000"
-  - name: DB_CONN_MAX
-    value: "30000"
-  - name: DD_SERVICE
-    value: octolytics-octolytics-core
-  - name: DD_ENV
-    value: develop
-  - name: DATABASE_URL_RO
-    value: jdbc:postgresql://10.100.17.55:5432/octolytics_develop
-  - name: DATABASE_URL
-    value: jdbc:postgresql://10.100.17.7:5432/octolytics_develop
-  - name: AVAILABLE_MEM
-    value: "1948"
+envs: []
 
 imagePullSecrets: []
 podAnnotations: {}
@@ -83,79 +60,4 @@ nodeSelector: {}
 affinity: {}
 tolerations: []
 
-containers:
-  - name: api
-    image:
-      repository: us-central1-docker.pkg.dev/octolytics-core/octolytics-repo/core
-      tag: efe58835411c685313206f8ab4e7869d68fcaec9
-      pullPolicy: IfNotPresent
-    ports:
-      - name: http
-        containerPort: 8080
-        protocol: TCP
-    service:
-      enabled: true
-      name: octolytics-core
-      type: ClusterIP
-      ports:
-        - name: http
-          port: 8080
-          targetPort: http
-          protocol: TCP
-    livenessProbe:
-      initialDelaySeconds: 10
-      periodSeconds: 10
-      failureThreshold: 3
-      timeoutSeconds: 30
-      httpGet:
-        path: /octolytics/actuator/health
-        port: http
-    readinessProbe:
-      initialDelaySeconds: 10
-      periodSeconds: 10
-      failureThreshold: 3
-      timeoutSeconds: 30
-      httpGet:
-        path: /octolytics/actuator/health
-        port: http
-    resources:
-      limits:
-        cpu: "1"
-        memory: 2048Mi
-      requests:
-        cpu: "1"
-        memory: 2048Mi
-    secrets:
-      - name: credentials.json
-        key: octolytics-push-manager-prod-firebase
-        mountPath: /usr/src/app/config
-      - name: DATABASE_USERNAME
-        key: octolytics-octolytics-core-develop-database-username
-      - name: DATABASE_PASSWORD
-        key: octolytics-octolytics-core-develop-database-password
-      - name: SALT_PASSWORD
-        key: octolytics-octolytics-core-api-salt
-      - name: SECRET_KEY
-        key: octolytics-octolytics-core-api-secret
-      - name: API_TOKEN_AUTH_ALTAN
-        key: octolytics-octolytics-core-api-token-auth-altan
-      - name: ARCHITECTURE_ID
-        key: octolytics-octolytics-core-architecture-id
-      - name: OC_CYPHER_SECRET_KEY
-        key: octolytics-octolytics-core-cypher-secret-key
-      - name: TWILIO_ACCOUNT_SID
-        key: octolytics-core-twilio-account-sid
-      - name: TWILIO_AUTH_TOKEN
-        key: octolytics-core-twilio-auth-token
-      - name: TWILIO_PHONE_NUMBER
-        key: octolytics-core-twilio-phone-number
-      - name: SPRING_PROFILE_ACTIVE
-        key: octolytics-octolytics-core-develop-spring-profile-active
-      - name: AUTH_APP_CLIENT_ID
-        key: octolytics-octolytics-core-auth-app-client-id
-      - name: AUTH_APP_CLIENT_SECRET
-        key: octolytics-octolytics-core-auth-app-client-secret
-      - name: AUTH_APP_USERNAME
-        key: octolytics-octolytics-core-auth-app-username
-      - name: AUTH_APP_PASSWORD
-        key: octolytics-octolytics-core-auth-app-password
+containers: []
